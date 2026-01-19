@@ -54,7 +54,7 @@ export function initializeForest(): ForestState {
   // Generate trees (avoiding center where player starts)
   const numTrees = 40;
   for (let i = 0; i < numTrees; i++) {
-    let x, y;
+    let x: number, y: number;
     do {
       x = Math.random() * (FOREST_WIDTH - 100) + 50;
       y = Math.random() * (FOREST_HEIGHT - 100) + 50;
@@ -74,7 +74,7 @@ export function initializeForest(): ForestState {
   // Generate bushes with seeds
   const numBushes = 60;
   for (let i = 0; i < numBushes; i++) {
-    let x, y;
+    let x: number, y: number;
     do {
       x = Math.random() * (FOREST_WIDTH - 60) + 30;
       y = Math.random() * (FOREST_HEIGHT - 60) + 30;
