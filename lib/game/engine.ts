@@ -33,6 +33,28 @@ import {
 } from './farm';
 
 const SAVE_KEY = 'watermelon-farm-save';
+const SAVE_VERSION = 'WF1:';
+const OBF_KEY = 'WatermelonFarm2024';
+
+// Obfuscation helpers
+function obfuscate(data: string): string {
+  let result = '';
+  for (let i = 0; i < data.length; i++) {
+    result += String.fromCharCode(data.charCodeAt(i) ^ OBF_KEY.charCodeAt(i % OBF_KEY.length));
+  }
+  return SAVE_VERSION + btoa(result);
+}
+
+function deobfuscate(data: string): string {
+  if (!data.startsWith(SAVE_VERSION)) return data; // Legacy save
+  const encoded = data.slice(SAVE_VERSION.length);
+  const decoded = atob(encoded);
+  let result = '';
+  for (let i = 0; i < decoded.length; i++) {
+    result += String.fromCharCode(decoded.charCodeAt(i) ^ OBF_KEY.charCodeAt(i % OBF_KEY.length));
+  }
+  return result;
+}
 
 // Create initial game state
 export function createInitialState(): GameState {
@@ -70,7 +92,7 @@ export function saveGame(state: GameState): void {
       ...state,
       lastUpdate: Date.now(),
     };
-    localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+    localStorage.setItem(SAVE_KEY, obfuscate(JSON.stringify(saveData)));
   } catch (e) {
     console.error('Failed to save game:', e);
   }
@@ -82,7 +104,7 @@ export function loadGame(): GameState | null {
     const saved = localStorage.getItem(SAVE_KEY);
     if (!saved) return null;
 
-    const state = JSON.parse(saved) as GameState;
+    const state = JSON.parse(deobfuscate(saved)) as GameState;
 
     // Calculate offline progress
     const { farm, eggsProduced, coinsEarned } = calculateOfflineProgress(
