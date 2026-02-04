@@ -19,6 +19,8 @@ import {
 import { Renderer } from '@/lib/game/renderer';
 import { getNearbyChicken } from '@/lib/game/farm';
 
+const SAVE_KEY = 'watermelon-farm-save';
+
 export default function Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameStateRef = useRef<GameState | null>(null);
@@ -26,6 +28,8 @@ export default function Game() {
   const rendererRef = useRef<Renderer | null>(null);
   const lastTimeRef = useRef<number>(0);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const saveBufferRef = useRef('');
 
   // Initialize game
   useEffect(() => {
@@ -64,6 +68,16 @@ export default function Game() {
   // Input handlers
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     inputRef.current.keys.add(e.key);
+
+    // Save code detection
+    if (e.key.length === 1) {
+      saveBufferRef.current = (saveBufferRef.current + e.key).slice(-4);
+      if (saveBufferRef.current.toLowerCase() === 'save') {
+        setShowSaveModal(true);
+        saveBufferRef.current = '';
+        return;
+      }
+    }
 
     // Prevent default for game keys
     if (['w', 'a', 's', 'd', 'e', 'Tab', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].includes(e.key.toLowerCase())) {
@@ -191,6 +205,40 @@ export default function Game() {
     };
   }, [isLoaded]);
 
+  const exportSave = () => {
+    const saveData = localStorage.getItem(SAVE_KEY);
+    if (!saveData) {
+      alert('No save data found!');
+      return;
+    }
+    const blob = new Blob([saveData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `watermelon-farm-save-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importSave = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+        alert('Save imported successfully! Refreshing...');
+        window.location.reload();
+      } catch {
+        alert('Invalid save file!');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   return (
     <div className="game-container">
       <canvas
@@ -200,6 +248,22 @@ export default function Game() {
         className="game-canvas"
         tabIndex={0}
       />
+      {showSaveModal && (
+        <div className="save-modal-overlay" onClick={() => setShowSaveModal(false)}>
+          <div className="save-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>💾 Save Management</h2>
+            <p>Export your save to back it up, or import a previous save.</p>
+            <div className="save-buttons">
+              <button onClick={exportSave} className="export-btn">📥 Export Save</button>
+              <label className="import-btn">
+                📤 Import Save
+                <input type="file" accept=".json" onChange={importSave} style={{ display: 'none' }} />
+              </label>
+              <button onClick={() => setShowSaveModal(false)} className="close-btn">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
       <style jsx>{`
         .game-container {
           display: flex;
@@ -216,6 +280,57 @@ export default function Game() {
           max-height: 100vh;
           border: 4px solid #4a3520;
           border-radius: 4px;
+        }
+        .save-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0,0,0,0.8);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+        .save-modal {
+          background: #1a1a2e;
+          padding: 30px;
+          border-radius: 12px;
+          max-width: 400px;
+          width: 90%;
+          color: white;
+        }
+        .save-modal h2 {
+          margin-bottom: 10px;
+        }
+        .save-modal p {
+          color: #aaa;
+          margin-bottom: 20px;
+        }
+        .save-buttons {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .export-btn, .import-btn, .close-btn {
+          padding: 12px;
+          border: none;
+          border-radius: 8px;
+          color: white;
+          cursor: pointer;
+          font-size: 1rem;
+          text-align: center;
+        }
+        .export-btn {
+          background: #4a9;
+        }
+        .import-btn {
+          background: #49a;
+        }
+        .close-btn {
+          background: #666;
+          margin-top: 10px;
         }
       `}</style>
     </div>
